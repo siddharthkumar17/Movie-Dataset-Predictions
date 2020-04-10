@@ -1,11 +1,9 @@
-// Databricks notebook source
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql._
+import org.apache.spark.SparkContext
+import org.apache.spark.SparkContext._
 
-object movie_analysis {
-  def main(args: Array[String]) {
-    
-    val spark = SparkSession.builder.appName("movies").getOrCreate()
-    
-    spark.stop()
-  }
-}
+val spark: SparkSession = SparkSession.builder.appName("movies").getOrCreate()
+
+val df: DataFrame = spark.read.csv("/FileStore/tables/links.csv")
+df.show()
+
