@@ -14,7 +14,8 @@ def cleanString(input: String): String = {
 val spark: SparkSession = SparkSession.builder.appName("movies").getOrCreate()
 
 val credits: DataFrame = spark.read.format("csv") .option("header", "true").load("/FileStore/tables/credits.csv")
-val ratings: DataFrame = spark.read.format("csv").option("header", "true").load("/FileStore/tables/ratings.csv").drop("userId", "timestamp").groupBy("movieId").agg(avg("rating").as("avg_rating")).withColumnRenamed("movieId","id")
+val ratings: DataFrame = spark.read.format("csv").option("header", "true").load("/FileStore/tables/ratings.csv").drop("userId", "timestamp").groupBy("movieId")
+  .agg(avg("rating").as("avg_rating"), min("rating").as("min_rating"),max("rating").as("max_rating")).withColumnRenamed("movieId","id")
 val keywords: DataFrame = spark.read.format("csv").option("header", "true").load("/FileStore/tables/keywords.csv")
 val movies_metadata: DataFrame = spark.read.format("csv").option("header", "true").load("/FileStore/tables/movies_metadata.csv")
 var merged = credits.join(ratings, Seq("id"), "inner").join(keywords,Seq("id"), "inner" ).join(movies_metadata, Seq("id"),"inner")
@@ -30,7 +31,7 @@ def extractActorList(cast: String): Array[String] ={
 }
 
 val udf1 = udf((x: String) => extractActorList(x))
-merged = merged.withColumn("cast",udf1($"cast"))
+merged = merged.withColumn("cast",udf1($"cast")).withColumn("keywords",udf1($"keywords"))
 
 def extractCrew(crew: String): Map[String,String] ={
   val temp = cleanString(crew)
