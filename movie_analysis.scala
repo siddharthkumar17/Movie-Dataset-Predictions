@@ -5,6 +5,10 @@ import org.apache.spark.sql.functions._
 import com.google.gson._
 import org.apache.spark.sql.types._
 import scala.collection.mutable._
+import org.apache.spark.mllib.tree.RandomForest
+import org.apache.spark.mllib.tree.model.RandomForestModel
+import org.apache.spark.mllib.util.MLUtils
+
 def cleanString(input: String): String = {
 
   return input.replace('\'','\"').replace("None","\"\"")
@@ -33,18 +37,27 @@ def extractActorList(cast: String): Array[String] ={
 val udf1 = udf((x: String) => extractActorList(x))
 merged = merged.withColumn("cast",udf1($"cast")).withColumn("keywords",udf1($"keywords"))
 
-def extractCrew(crew: String): Map[String,String] ={
+def extractCrew(crew: String): Array[String] ={
   val temp = cleanString(crew)
-  var res = new HashMap[String, String]
+  var res = ""
   val json = new Gson().fromJson(temp, classOf[JsonArray]);
   for(t<-0 to json.size()-1){
-    val a = json.get(t).getAsJsonObject()
-    res+=(a.get("job").getAsString() -> a.get("name").getAsString().replace("\"", "").replace(" ","-"))
+    res+=json.get(t).getAsJsonObject().get("name").getAsString().replace("\"", "").replace(" ","-")+' '
   }
+ 
   
-  
-  return res
+  return res.trim().split(" ")
 }
 
 val udf2 = udf((x: String) => extractCrew(x))
 merged = merged.withColumn("crew",udf2($"crew"))
+
+//Implement the estimators and pipelines from spark ML
+import org.apache.spark.ml.feature.VectorIndexer
+val indexer1 = new VectorIndexer()
+  .setInputCol("keywords")
+  .setOutputCol("keywords_indexed")
+
+merged = indexer1.fit(merged).transform(merged)
+
+print(merged("keywords_indexed"))
